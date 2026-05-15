@@ -4,10 +4,7 @@
 
 {
   evalModules = 
-    {
-      modules,
-      ...
-    }@args:
+    args:
     pkgs.lib.evalModules (args // {
       modules = [
         ./modules.nix
