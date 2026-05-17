@@ -1,24 +1,42 @@
 let
-  pkgs = import <nixpkgs> {};
-  lib = pkgs.lib;
+  pkgs = import <nixpkgs> { };
   nixosSystem = import <nixpkgs/nixos/lib/eval-config.nix>; # equivalent to lib.nixosSystem in flakes
-  neurotic = import ../. { inherit pkgs; };
+  inherit (pkgs) lib;
+  inherit (lib) evalModules;
 
-  # evaluate the top-level modules
-  top-level = neurotic.evalModules {
-    modules = [
-      # import only top-level modules here
-      ./a.nix # b.nix is imported by a.nix
-    ];
-    specialArgs.argOuter = 1;
-  };
+  # Evaluate all the top-level modules.
+  top-level =
+    evalModules
+      {
+        # Defines every file that will be imported.
+        # Import only top-level modules here.
+        modules = [
+          ./options.nix
+
+          ./some-module.nix
+          # This isn't needed because ./some-module.nix already imports ./another-module.nix.
+          # ./another-module.nix
+
+          # If you want to import everything, like in a typical dendritic config, use the import-tree function from the flake example.
+        ];
+        # Additional arguments that will be available across all of your top-level modules.
+        specialArgs = {
+          outerArg = 17;
+        };
+      }
+      .config; # Pull out the config attribute to get the result of the evaluation.
 in
 nixosSystem {
   modules = [
-    # import nixos modules here
-    top-level.config.modules.nixos.default # include the nixos module using the path: modules.nixos.default
-    ./nixos-only/c.nix # alternatively, see b.nix
+    # You can import nixos modules here.
+    ./nixos-only/c.nix
+
+    # You can also include outputs of your top-level.
+    top-level.modules.nixos.some-module
+    top-level.modules.nixos.another-module
   ];
-  specialArgs.argInner = 2;
+  specialArgs = {
+    innerArg = 12;
+  };
   system = "x86_64-linux";
 }
